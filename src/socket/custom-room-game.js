@@ -1,6 +1,5 @@
 import Profile from '../model/Profile.js';
 import CustomRoom from '../model/customRoom.js';
-import { COMISSION_RATE } from '../constants/index.js';
 import { BOT_LIST } from '../constants/index.js';
 import BotManager from '../services/botManager.js';
 
@@ -226,13 +225,13 @@ async function announceTurn(namespace, roomId) {
               }
 
 
-              if (killInfo) {
-                const killedPlayer = botRoom2.players.find(p => p.playerId === killInfo.killedPlayerId);
-                if (killedPlayer) {
-                  killedPlayer.tokens[killInfo.killedTokenIndex] = 0;
-                  const scoreReduction = killInfo.killedTokenPosition;
-                  killedPlayer.score = Math.max(0, killedPlayer.score - scoreReduction);
-                  extraTurn = true;
+              // if (killInfo) {
+              //   const killedPlayer = botRoom2.players.find(p => p.playerId === killInfo.killedPlayerId);
+              //   if (killedPlayer) {
+              //     killedPlayer.tokens[killInfo.killedTokenIndex] = 0;
+              //     const scoreReduction = killInfo.killedTokenPosition;
+              //     killedPlayer.score = Math.max(0, killedPlayer.score - scoreReduction);
+              //     extraTurn = true;
 
                   // namespace.to(roomId).emit('token-killed', {
                   //   killerPlayerId: currentPlayer.playerId,
@@ -243,8 +242,8 @@ async function announceTurn(namespace, roomId) {
                   //   scoreReduction: scoreReduction,
                   //   message: `${currentPlayer.name} killed ${killInfo.killedPlayerName}'s token!`
                   // });
-                }
-              }
+                // }
+              // }
 
               // Additional bonus if token reached home (position 56)
               if (newPos === 56 && currentPos < 56) {
@@ -769,13 +768,13 @@ export const setupCustomRoomGame = (namespace) => {
           scoreUpdate = calculateScore(room, playerId, 'move', stepsMoved);
         }
 
-        if (killInfo) {
-          const killedPlayer = room.players.find(p => p.playerId === killInfo.killedPlayerId);
-          if (killedPlayer) {
-            killedPlayer.tokens[killInfo.killedTokenIndex] = 0;
-            const scoreReduction = killInfo.killedTokenPosition;
-            killedPlayer.score = Math.max(0, killedPlayer.score - scoreReduction);
-            extraTurn = true;
+        // if (killInfo) {
+        //   const killedPlayer = room.players.find(p => p.playerId === killInfo.killedPlayerId);
+        //   if (killedPlayer) {
+        //     killedPlayer.tokens[killInfo.killedTokenIndex] = 0;
+        //     const scoreReduction = killInfo.killedTokenPosition;
+        //     killedPlayer.score = Math.max(0, killedPlayer.score - scoreReduction);
+        //     extraTurn = true;
 
             // namespace.to(roomId).emit('token-killed', {
             //   killerPlayerId: playerId,
@@ -786,8 +785,8 @@ export const setupCustomRoomGame = (namespace) => {
             //   scoreReduction: scoreReduction,
             //   message: `${currentPlayer.name} killed ${killInfo.killedPlayerName}'s token!`
             // });
-          }
-        }
+          // }
+        // }
 
         // Additional bonus if token reached home (position 56)
         if (to === 56 && from < 56) {
