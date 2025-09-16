@@ -1,0 +1,78 @@
+import User from '../../model/user.js';
+import bcrypt from 'bcrypt';
+import jwt from "jsonwebtoken";
+import Profile from '../../model/Profile.js';
+
+// Register
+export const register = async (req, res) => {
+  try {
+    const { first_name, last_name, email, password } = req.body;
+    if (!first_name || !last_name || !email || !password)
+      return res.status(400).json({
+        error: "All fields required"
+      });
+
+    const existing = await User.findOne({ email });
+    if (existing)
+      return res.status(400).json({
+        error: "Email already registered"
+      });
+
+    const hashed = await bcrypt.hash(password, 10);
+    const newUser = new Profile({
+      first_name,
+      last_name,
+      email,
+      role: "admin", // Default role for admin registration
+      password: hashed,
+      user_id: Date.now().toString(),
+      user_token: hashed,
+      device_token: "NA",
+      my_token: "NA",
+      referral_code: "NA", // Ye Error Dega kyu ki referral_code unique hone cahiye
+      pic_url: "default.png"
+    });
+
+    await newUser.save();
+    res.json({
+      success: true,
+      message: "User registered successfully"
+    });
+  } catch (error) {
+    console.error("Error registering user:", error);
+    res.status(500).json({
+      error: "Internal Server Error"
+    });
+  }
+};
+
+// Login
+export const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password)
+      return res.status(400).json({
+        error: "Email & Password required"
+      });
+
+    const user = await Profile.findOne({ email });
+    if (!user) return res.status(404).json({
+      error: "User not found"
+    });
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(400).json({
+      error: "Invalid credentials"
+    });
+
+    const token = jwt.sign({
+      id: user._id,
+      role: user.role
+    }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    res.json({ success: true, message: "Login successful", token });
+  } catch (error) {
+    console.error("Error logging in:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+};
