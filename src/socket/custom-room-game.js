@@ -1,6 +1,5 @@
 import Profile from '../model/Profile.js';
 import CustomRoom from '../model/customRoom.js';
-import { COMISSION_RATE } from '../constants/index.js';
 import { BOT_LIST } from '../constants/index.js';
 import BotManager from '../services/botManager.js';
 
@@ -10,6 +9,7 @@ const waitingRoomsByBet = {}; // Structure: { 'player-2': { bet1: roomId, bet2: 
 // const SAFE_POSITIONS = [1, 9, 14, 22, 27, 35, 40, 48];
 const SAFE_POSITIONS = [0, 8, 13, 21, 26, 34, 39, 47];
 const STARTING_POSITIONS = [0, 13, 26, 39];
+const BOT_MESSAGES = ["hey", "ooo", "nice!", "let's go!", "good luck!", "hahaha"];
 
 const getUniversalPosition = (playerPosition, tokenPosition) => {
   if (tokenPosition === 0) return -1;
@@ -547,6 +547,26 @@ export const setupCustomRoomGame = (namespace) => {
           time: new Date().toISOString()
         });
 
+        const room = await CustomRoom.findOne({ roomId });
+        if (!room) return;
+
+        const bots = room.players.filter(p => p.isBot || p.playerId.startsWith("bot-"));
+
+        if (bots.length > 0) {
+          const randomBot = bots[Math.floor(Math.random() * bots.length)];
+
+          const randomMessage = BOT_MESSAGES[Math.floor(Math.random() * BOT_MESSAGES.length)];
+
+          setTimeout(() => {
+            namespace.to(roomId).emit("chatMessage", {
+              playerId: randomBot.playerId,
+              username: randomBot.name,
+              message: randomMessage,
+              time: new Date().toISOString()
+            });
+          }, 1000 + Math.random() * 1500); 
+        }
+
       } catch (error) {
         console.error("chat room error:", error);
         socket.emit("message", { status: "error", message: "Server error" });
@@ -698,7 +718,7 @@ export const setupCustomRoomGame = (namespace) => {
         if (!room.consecutiveSixes) room.consecutiveSixes = {};
         if (!room.consecutiveSixes[playerId]) room.consecutiveSixes[playerId] = 0;
 
-         room.hasRolled = true;
+        room.hasRolled = true;
         namespace.to(roomId).emit("custom-dice-rolling", {
           playerId: playerId
         })
@@ -804,7 +824,7 @@ export const setupCustomRoomGame = (namespace) => {
       try {
         const room = await CustomRoom.findOne({ roomId });
         // if (!room || room.gameOver || !room.hasRolled || room.hasMoved) return;
-        
+
         const currentPlayer = room.players.find(p => p.playerId === playerId);
         if (!currentPlayer || !currentPlayer.tokens) return;
 
@@ -828,7 +848,7 @@ export const setupCustomRoomGame = (namespace) => {
         killedPlayer.score = Math.max(0, (killedPlayer.score || 0) - killPenalty);
         // const killReward = 0;
         // const killRewardUpdate = calculateScore(room, playerId, 'kill', killReward);
-         killedPlayer.tokens[killedTokenIndex] = 0;
+        killedPlayer.tokens[killedTokenIndex] = 0;
 
         extraTurn = true;
 
