@@ -1,5 +1,6 @@
 import Profile from '../model/Profile.js';
 import CustomRoom from '../model/customRoom.js';
+import { COMISSION_RATE } from '../constants/index.js';
 import { BOT_LIST } from '../constants/index.js';
 import BotManager from '../services/botManager.js';
 
@@ -23,7 +24,6 @@ const getUniversalPosition = (playerPosition, tokenPosition) => {
 };
 
 const checkTokenKill = (room, movingPlayerId, tokenIndex, newPosition) => {
-  console.log(movingPlayerId, tokenIndex, newPosition);
   const movingPlayer = room.players.find(p => p.playerId === movingPlayerId);
   if (!movingPlayer) return null;
 
@@ -182,6 +182,7 @@ async function announceTurn(namespace, roomId) {
         try {
           const botRoom = await CustomRoom.findOne({ roomId });
           if (!botRoom || botRoom.gameOver) return;
+
           namespace.to(roomId).emit("custom-dice-rolling", {
             playerId: currentPlayer.playerId
           })
@@ -211,9 +212,6 @@ async function announceTurn(namespace, roomId) {
               const tokenIndex = await BotManager.selectBestToken(botPlayer, diceValue, botRoom2);
               const currentPos = botPlayer.tokens[tokenIndex] || 0;
               const newPos = Math.min(currentPos + diceValue, 56);
-
-              const killInfo = checkTokenKill(botRoom2, currentPlayer.playerId, tokenIndex, newPos);
-
               botPlayer.tokens[tokenIndex] = newPos;
 
               const stepsMoved = Math.abs(newPos - currentPos);
@@ -223,27 +221,6 @@ async function announceTurn(namespace, roomId) {
               if (stepsMoved > 0) {
                 scoreUpdate = calculateScore(botRoom2, currentPlayer.playerId, 'move', stepsMoved);
               }
-
-
-              // if (killInfo) {
-              //   const killedPlayer = botRoom2.players.find(p => p.playerId === killInfo.killedPlayerId);
-              //   if (killedPlayer) {
-              //     killedPlayer.tokens[killInfo.killedTokenIndex] = 0;
-              //     const scoreReduction = killInfo.killedTokenPosition;
-              //     killedPlayer.score = Math.max(0, killedPlayer.score - scoreReduction);
-              //     extraTurn = true;
-
-                  // namespace.to(roomId).emit('token-killed', {
-                  //   killerPlayerId: currentPlayer.playerId,
-                  //   killerName: currentPlayer.name,
-                  //   killedPlayerId: killInfo.killedPlayerId,
-                  //   killedPlayerName: killInfo.killedPlayerName,
-                  //   killedTokenIndex: killInfo.killedTokenIndex,
-                  //   scoreReduction: scoreReduction,
-                  //   message: `${currentPlayer.name} killed ${killInfo.killedPlayerName}'s token!`
-                  // });
-                // }
-              // }
 
               // Additional bonus if token reached home (position 56)
               if (newPos === 56 && currentPos < 56) {
@@ -505,7 +482,7 @@ export const setupCustomRoomGame = (namespace) => {
         }
 
         const user = await Profile.findById(playerId);
-      
+
         if (!user || user.wallet < room.bet) {
           return socket.emit('message', { status: 'error', message: 'Invalid user or insufficient balance' });
         }
@@ -718,10 +695,10 @@ export const setupCustomRoomGame = (namespace) => {
         const currentPlayer = room.players[room.currentPlayerIndex];
         if (currentPlayer?.playerId !== playerId) return;
 
-        room.hasRolled = true;
-
         if (!room.consecutiveSixes) room.consecutiveSixes = {};
         if (!room.consecutiveSixes[playerId]) room.consecutiveSixes[playerId] = 0;
+
+         room.hasRolled = true;
         namespace.to(roomId).emit("custom-dice-rolling", {
           playerId: playerId
         })
@@ -755,7 +732,7 @@ export const setupCustomRoomGame = (namespace) => {
         const currentPlayer = room.players.find(p => p.playerId === playerId);
         if (!currentPlayer || !currentPlayer.tokens) return;
 
-        const killInfo = checkTokenKill(room, playerId, tokenIndex, to);
+        const killInfo = checkTokenKill(room, playerId, tokenIndex, to); // roomid, player id, killertoken, victemtoken
 
         // Update token position
         currentPlayer.tokens[tokenIndex] = to;
@@ -767,26 +744,6 @@ export const setupCustomRoomGame = (namespace) => {
         if (stepsMoved > 0) {
           scoreUpdate = calculateScore(room, playerId, 'move', stepsMoved);
         }
-
-        // if (killInfo) {
-        //   const killedPlayer = room.players.find(p => p.playerId === killInfo.killedPlayerId);
-        //   if (killedPlayer) {
-        //     killedPlayer.tokens[killInfo.killedTokenIndex] = 0;
-        //     const scoreReduction = killInfo.killedTokenPosition;
-        //     killedPlayer.score = Math.max(0, killedPlayer.score - scoreReduction);
-        //     extraTurn = true;
-
-            // namespace.to(roomId).emit('token-killed', {
-            //   killerPlayerId: playerId,
-            //   killerName: currentPlayer.name,
-            //   killedPlayerId: killInfo.killedPlayerId,
-            //   killedPlayerName: killInfo.killedPlayerName,
-            //   killedTokenIndex: killInfo.killedTokenIndex,
-            //   scoreReduction: scoreReduction,
-            //   message: `${currentPlayer.name} killed ${killInfo.killedPlayerName}'s token!`
-            // });
-          // }
-        // }
 
         // Additional bonus if token reached home (position 56)
         if (to === 56 && from < 56) {
@@ -842,6 +799,75 @@ export const setupCustomRoomGame = (namespace) => {
         console.error('Token moved error:', error);
       }
     });
+
+    socket.on('custom-token-kill', async ({ roomId, playerId, killerTokenIndex, killedPlayerId, killedTokenIndex, from, to }) => {
+      try {
+        const room = await CustomRoom.findOne({ roomId });
+        // if (!room || room.gameOver || !room.hasRolled || room.hasMoved) return;
+        
+        const currentPlayer = room.players.find(p => p.playerId === playerId);
+        if (!currentPlayer || !currentPlayer.tokens) return;
+
+        const killedPlayer = room.players.find(p => p.playerId === killedPlayerId);
+        if (!killedPlayer) {
+          console.warn(`Killed player ${killedPlayerId} not found in room ${roomId}`);
+          return;
+        }
+
+        // Score logic
+        const stepsMoved = Math.abs(to - from);
+        let scoreUpdate = null;
+        let extraTurn = false;
+
+        if (stepsMoved > 0) {
+          scoreUpdate = calculateScore(room, playerId, 'move', stepsMoved);
+        }
+
+        const killPenalty = killedPlayer.tokens[killedTokenIndex]; // I want dynamic penalty
+        console.log("poits", killPenalty)
+        killedPlayer.score = Math.max(0, (killedPlayer.score || 0) - killPenalty);
+        // const killReward = 0;
+        // const killRewardUpdate = calculateScore(room, playerId, 'kill', killReward);
+         killedPlayer.tokens[killedTokenIndex] = 0;
+
+        extraTurn = true;
+
+        room.hasMoved = true;
+        await room.save();
+
+        namespace.to(roomId).emit('token-killed', {
+          killerPlayerId: playerId,
+          killerName: currentPlayer.name,
+          killerTokenIndex,
+          killedPlayerId,
+          killedPlayerName: killedPlayer.name,
+          killedTokenIndex,
+          scoreReduction: killPenalty,
+          message: `${currentPlayer.name} killed ${killedPlayer.name}'s token!`
+        });
+
+        if (scoreUpdate) namespace.to(roomId).emit('score-updated', scoreUpdate);
+        // if (killRewardUpdate) namespace.to(roomId).emit('score-updated', killRewardUpdate);
+
+        const allScores = room.players.map(p => ({
+          playerId: p.playerId,
+          name: p.name,
+          score: typeof p.score === 'number' ? p.score : 0
+        }));
+        namespace.to(roomId).emit('players-scores', { scores: allScores });
+
+        const lastDice = room.lastDiceValue || 0;
+        if (lastDice !== 6 && !extraTurn) {
+          room.currentPlayerIndex = getNextPlayerIndex(room.players, room.currentPlayerIndex);
+          await room.save();
+        }
+
+        announceTurn(namespace, roomId);
+      } catch (error) {
+        console.error('Token kill error:', error);
+      }
+    });
+
 
     socket.on('leave-custom-room', async ({ playerId }) => {
       await handlePlayerLeave(namespace, playerId);
@@ -981,7 +1007,7 @@ async function startCustomRoomGame(namespace, roomId, mode) {
 
     const totalPot = room.bet * room.players.length;
     const winning_amount = totalPot;
-// console.log(room.players);
+    // console.log(room.players);
     namespace.to(roomId).emit('custom-game-started', {
       players: room.players,
       winning_amount,
