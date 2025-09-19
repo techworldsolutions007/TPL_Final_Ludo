@@ -36,6 +36,11 @@ import { enterReferralCode } from './src/controllers/refer.js';
 import multer from 'multer';
 import { isAuthenticated } from "./src/middleware/auth.js";
 import PlayerBoardAvatar from "./src/model/PlayerBoardAvatar.js";
+
+import iapRoutes from "./src/routes/iap.routes.js";
+
+
+
 const upload = multer();
 
 dotenv.config();
@@ -82,7 +87,7 @@ app.use('/api/v1/player', playerRouter);
 app.use('/api/v1/common/', commonRouter);
 app.use("/api/v1/kyc/", kycRoutes);
 app.use("/api/v1/refer/player", upload.none(), enterReferralCode);
-app.use("/api/v1/playerprofileavatar", playerprofileavatar);
+app.use("/api/v1/playerProfileAvatar", playerprofileavatar);
 app.use("/api/v1/playerBoardAvatar", playerBoardAvatar );
 app.use("/api/v1/wallet", walletRoutes);
 
@@ -93,6 +98,11 @@ app.use('/api/v1/store', storeRoutes);
 // Admin panel (EJS page)
 app.use('/admin', adminKycRoutes);
 app.use('/api/v1/admin', adminRouter);
+
+
+// iap 
+app.use("/api/v1/iap", iapRoutes);
+
 
 // Test route for automation
 app.get('/test', (req, res) => {

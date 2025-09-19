@@ -17,11 +17,11 @@ const ProfileSchema = new mongoose.Schema(
       required: false,
 
     },
-    avatar_url: {
+    board_avatar_url: {
       type: String,
       required: false,
     },
-    avatar_active_url: {
+    player_BoardAvatar_SelectedId: {
       type: String,
       required: false,
     },

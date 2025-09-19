@@ -2,6 +2,7 @@ import Profile from '../model/Profile.js';
 import CustomRoom from '../model/customRoom.js';
 import { BOT_LIST } from '../constants/index.js';
 import BotManager from '../services/botManager.js';
+import PlayerBoardAvatar from '../model/PlayerBoardAvatar.js';
 
 const playerRoomMap = {};
 const actionTimeoutMap = {};
@@ -379,12 +380,13 @@ export const setupCustomRoomGame = (namespace) => {
   namespace.on('connection', (socket) => {
 
     // Select avatar
-    socket.on("select-avatar", async ({ roomId, playerId, avatarUrl }) => {
+    socket.on("select-avatar", async ({ roomId, playerId, avatarId }) => {
       try {
         const room = await CustomRoom.findOne({ roomId });
+        const doc = await PlayerBoardAvatar.findOne({ boardAvatarId: avatarId });
         if (!room) return;
 
-        room.avatarsSelected.set(playerId, avatarUrl);
+        room.avatarsSelected.set(playerId, doc.boardAvatarUrl);
         await room.save();
 
         // namespace.to(roomId).emit("avatar-selected", { playerId, avatarUrl });
@@ -404,9 +406,9 @@ export const setupCustomRoomGame = (namespace) => {
         room.avatarsSelected.set(playerId, "skipped");
         await room.save();
 
-        namespace.to(roomId).emit("avatar-skipped", { playerId });
+        // namespace.to(roomId).emit("avatar-skipped", { playerId });
 
-        checkAllAvatarsSelected(namespace, room);
+        // checkAllAvatarsSelected(namespace, room);
       } catch (err) {
         console.error("Skip avatar error:", err);
       }
@@ -428,6 +430,8 @@ export const setupCustomRoomGame = (namespace) => {
 
         user.wallet -= bet_amount;
         await user.save();
+        const avatarUrl = room?.[roomId]?.avatarsSelected?.[playerId]?.avatarUrl;
+        console.log(avatarUrl);
 
         const roomId = generateRoomId();
         const newRoom = new CustomRoom({
@@ -439,7 +443,6 @@ export const setupCustomRoomGame = (namespace) => {
             playerId,
             name: user.first_name,
             pic_url: user.pic_url || '',
-            board_avatar_url: user.avatar_url,
             position: 0,
             missedTurns: 0,
             score: 0,
@@ -495,7 +498,6 @@ export const setupCustomRoomGame = (namespace) => {
           playerId,
           name: user.first_name,
           pic_url: user.pic_url || '',
-          board_avatar_url: user.avatar_url,
           position: room.players.length,
           missedTurns: 0,
           score: 0,
@@ -564,7 +566,7 @@ export const setupCustomRoomGame = (namespace) => {
               message: randomMessage,
               time: new Date().toISOString()
             });
-          }, 1000 + Math.random() * 1500); 
+          }, 1000 + Math.random() * 1500);
         }
 
       } catch (error) {
@@ -627,7 +629,7 @@ export const setupCustomRoomGame = (namespace) => {
               playerId,
               name: user.first_name,
               pic_url: user.pic_url || '',
-              board_avatar_url: user.avatar_url,
+              board_avatar_url: user.board_avatar_url,
               position,
               missedTurns: 0,
               score: 0,
@@ -655,7 +657,7 @@ export const setupCustomRoomGame = (namespace) => {
               playerId,
               name: user.first_name,
               pic_url: user.pic_url || '',
-              board_avatar_url: user.avatar_url,
+              board_avatar_url: user.board_avatar_url,
               position: 0,
               missedTurns: 0,
               score: 0,
@@ -683,7 +685,6 @@ export const setupCustomRoomGame = (namespace) => {
         playerRoomMap[playerId] = room.roomId;
         socket.join(room.roomId);
         namespace.to(room.roomId).emit("show-avatar", { message: "Avatar Panel Activated" });
-
 
         namespace.to(room.roomId).emit('player-joined', {
           players: room.players,
@@ -778,6 +779,19 @@ export const setupCustomRoomGame = (namespace) => {
           }
         }
 
+        // // ✅ Extra Turn if token reaches home
+        // if (to === 56 && from < 56) {
+        //   const homeBonus = calculateScore(room, playerId, 'home', 50);
+        //   if (homeBonus) {
+        //     scoreUpdate = {
+        //       ...homeBonus,
+        //       points: (scoreUpdate?.points || 0) + homeBonus.points,
+        //       action: 'move+home'
+        //     };
+        //   }
+        //   extraTurn = true; // 🔥 Give extra turn when token reaches home
+        // }
+
         room.hasMoved = true;
         await room.save();
 
@@ -808,6 +822,12 @@ export const setupCustomRoomGame = (namespace) => {
         namespace.to(roomId).emit('players-scores', {
           scores: allScores
         });
+
+        // // ✅ Extra turn check
+        // if (!extraTurn && room.lastDiceValue !== 6) {
+        //   room.currentPlayerIndex = getNextPlayerIndex(room.players, room.currentPlayerIndex);
+        //   await room.save();
+        // }
 
         const lastDice = room.lastDiceValue || 0;
         if (lastDice !== 6 && !extraTurn) {

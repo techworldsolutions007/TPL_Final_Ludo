@@ -38,6 +38,7 @@ export const createAvatar = (async (req, res) => {
 
   const uploaded = await uploadToCloudinary(req.file.buffer);
   const doc = await PlayerProfileAvatar.create({
+    profileAvatarId: req.body.profileAvatarId,
     profileAvatarUrl: uploaded.secure_url,
     price,
     PurchaseBy: [],
@@ -78,9 +79,10 @@ export const listAvatars = asyncHandler(async (req, res) => {
 export const getAvatar = asyncHandler(async (req, res) => {
   try {
     const profileAvatarId = req.params.id;
-    const { playerId } = req.body;
-console.log(playerId);
-    const doc = await PlayerProfileAvatar.findById(profileAvatarId).populate("PurchaseBy", "name email");
+    const playerId = req.user._id;
+
+    console.log(playerId, profileAvatarId);
+    const doc = await PlayerProfileAvatar.findOne({ profileAvatarId: profileAvatarId }).populate("PurchaseBy", "name email");
     const user = await Profile.findById(playerId);
 
     if (!doc) {
@@ -93,12 +95,12 @@ console.log(playerId);
     }
 
     user.pic_url = doc.profileAvatarUrl;
-    user.selected_pic_id = doc._id;
+    user.selected_pic_id = doc.profileAvatarId;
     user.save();
-    res.json({ status: "success", data: user });
+    res.json({ status: "success", profileAvatarUrl: doc.profileAvatarUrl });
   } catch (error) {
     console.error(error);
-    res.json({ status: "failed", message: "internal server error"});
+    res.json({ status: "failed", message: "internal server error" });
   }
 });
 

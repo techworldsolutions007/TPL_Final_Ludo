@@ -6,6 +6,11 @@ const playerProfileAvatarSchema = new mongoose.Schema(
       type: String,
       required: true
     },
+    profileAvatarId: {
+      type: String,
+      required: true,
+      unique: true
+    },
     price: {
       type: Number,
       required: true,

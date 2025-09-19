@@ -12,8 +12,6 @@ const uploadToCloudinary = (buffer, folder) =>
             {
                 folder: folder || process.env.CLOUDINARY_FOLDER || "avatars",
                 resource_type: "image",
-                // you can add transformations here if needed
-                // transformation: [{ width: 512, height: 512, crop: "fill", gravity: "auto" }]
             },
             (err, result) => {
                 if (err) return reject(err);
@@ -25,9 +23,9 @@ const uploadToCloudinary = (buffer, folder) =>
 
 /** POST /api/v1/avatars  (multipart/form-data: file=image, price=number) */
 export const createAvatar = (async (req, res) => {
-    if (!req.files || !req.files.boardAvatarImage || !req.files.boardAvatarActiveImage) {
+    if (!req.file) {
         res.status(400);
-        throw new Error("Both image1 and image2 files are required");
+        throw new Error("boardAvatar files are required");
     }
 
     const price = Number(req.body.price ?? 0);
@@ -36,16 +34,14 @@ export const createAvatar = (async (req, res) => {
         throw new Error("Invalid price");
     }
 
-    const uploaded1 = await uploadToCloudinary(req.files.boardAvatarImage[0].buffer);
-    const uploaded2 = await uploadToCloudinary(req.files.boardAvatarActiveImage[0].buffer);
+    const uploaded = await uploadToCloudinary(req.file.buffer);
 
     const doc = await PlayerBoardAvatar.create({
-        boardAvatarUrl: uploaded1.secure_url,
-        boardAvatarUrlActive: uploaded2.secure_url,
+        boardAvatarId: req.body.boardAvatarId,
+        boardAvatarUrl: uploaded.secure_url,
         price,
-        PurchaseBy: [],
-        cloudinaryPublicId: uploaded1.public_id,
-        cloudinaryPublicId2: uploaded2.public_id
+        purchaseBy: [],
+        cloudinaryPublicId: uploaded.public_id
     });
 
     res.status(201).json({ status: "success", data: doc });
@@ -82,9 +78,10 @@ export const listAvatars = asyncHandler(async (req, res) => {
 export const getAvatar = asyncHandler(async (req, res) => {
     try {
         const boardAvatarId = req.params.id;
-        const { playerId } = req.body;
-        console.log(playerId);
-        const doc = await PlayerBoardAvatar.findById(boardAvatarId).populate("PurchaseBy", "name email");
+        const playerId = req.user._id;
+        
+        console.log(playerId, boardAvatarId);
+        const doc = await PlayerBoardAvatar.findOne({ boardAvatarId: boardAvatarId });
         const user = await Profile.findById(playerId);
 
         if (!doc) {
@@ -96,8 +93,8 @@ export const getAvatar = asyncHandler(async (req, res) => {
             throw new Error("User not found");
         }
 
-        user.avatar_url = doc.boardAvatarUrl;
-        user.avatar_active_url = doc.boardAvatarUrlActive;
+        user.board_avatar_url = doc.boardAvatarUrl;
+        user.player_BoardAvatar_SelectedId = doc.boardAvatarId;
         user.save();
         res.json({ status: "success", data: user });
     } catch (error) {
@@ -124,17 +121,10 @@ export const updateAvatar = asyncHandler(async (req, res) => {
                 console.warn("Cloudinary destroy failed:", e?.message || e);
             }
         }
-        else if(doc.cloudinaryPublicId2){
-             try {
-                await cloudinary.uploader.destroy(doc.cloudinaryPublicId2);
-            } catch (e) {
-                console.warn("Cloudinary destroy failed:", e?.message || e);
-            }
         }
-        const uploaded = await uploadToCloudinary(req.file.buffer);
+        const uploaded = await uploadToCloudinary(req.boardAvatar.buffer);
         doc.profileAvatarUrl = uploaded.secure_url;
         doc.cloudinaryPublicId = uploaded.public_id;
-    }
 
     // update price if provided
     if (typeof req.body.price !== "undefined") {

@@ -2,11 +2,12 @@ import mongoose from "mongoose";
 
 const playerBoardAvatarSchema = new mongoose.Schema(
   {
-    boardAvatarUrl: {
+    boardAvatarId: {
       type: String,
-      required: true
+      required: true,
+      unique: true
     },
-    boardAvatarUrlActive: {
+    boardAvatarUrl: {
       type: String,
       required: true
     },
@@ -16,10 +17,9 @@ const playerBoardAvatarSchema = new mongoose.Schema(
       min: 0,
       default: 0
     },
-    status: {
-      type: String,
-      required: true,
-      default: "Coming Soon"
+    availability: {
+      type: Boolean,
+      default: true
     },
     purchaseBy: [
       {

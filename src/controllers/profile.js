@@ -9,11 +9,11 @@ export const playerProfile = async (req, res) => {
     // console.log(req.user._id);
     const userData = await Profile.findById(req.user._id);
 
-    
+
     if (!userData) {
       return res.status(404).json({ message: "User not found with given id" });
     }
-          return res.status(201).json({ userData: userData });
+    return res.status(201).json({ userData: userData });
 
 
   } catch (err) {
@@ -26,7 +26,7 @@ export const updatePlayerProfile = async (req, res) => {
   try {
     const { id } = req.params; // player id from route
     const { first_name, last_name } = req.body;
-    
+
     const updatedProfile = await Profile.findByIdAndUpdate(
       id,
       {
@@ -83,7 +83,7 @@ export const updatePlayerProfileImage = async (req, res) => {
     const updatedProfile = await Profile.findByIdAndUpdate(
       id,
       {
-        ...(picUrl && { pic_url: result.secure_url })
+        ...(picUrl && { pic_url: result.secure_url, selected_pic_id: null })
       },
       { new: true, runValidators: true }
     );

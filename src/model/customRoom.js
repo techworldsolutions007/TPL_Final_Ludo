@@ -27,7 +27,11 @@ const playerSchema = new mongoose.Schema({
 
 const customRoomSchema = new mongoose.Schema({
   roomId: { type: String, unique: true },
-  avatarsSelected: { type: Map, of: String, default: {} }, // { playerId: "avatar_url" or "skipped" }
+  avatarsSelected: {
+    type: Map,
+    of: String, // { playerId: "avatar_url" or "skipped" }
+    default: {}
+  }, 
   avatarSelectionComplete: { type: Boolean, default: false },
   gameType: {
     type: String,
