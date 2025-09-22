@@ -15,29 +15,26 @@ export const enterReferralCode = async (req, res) => {
     }
 
     if (user.referred_by) {
-      console.log("1");
       return res.status(400).json({ success: false, message: "Referral code already used by this user" });
     }
 console.log(referralCode);
     const referrer = await Profile.findOne({ referral_code: referralCode });
 
     if (!referrer) {
-      console.log("2", referrer);
       return res.status(404).json({ success: false, message: "Invalid referral code" });
     }
 
     if (referrer._id.equals(user._id)) {
-      console.log("3");
       return res.status(400).json({ success: false, message: "You cannot refer yourself" });
     }
 
     // Apply referral
     user.referred_by = referralCode;
-    user.wallet += 2500;
+    user.wallet += 2000;
     user.referral_code_Bonus_Used = true;
 
     referrer.referrals.push(user._id);
-    referrer.wallet += 5000;
+    referrer.wallet += 2000;
 
     await user.save();
     await referrer.save();

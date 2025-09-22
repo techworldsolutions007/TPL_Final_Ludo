@@ -81,7 +81,6 @@ export const getAvatar = asyncHandler(async (req, res) => {
     const profileAvatarId = req.params.id;
     const playerId = req.user._id;
 
-    console.log(playerId, profileAvatarId);
     const doc = await PlayerProfileAvatar.findOne({ profileAvatarId: profileAvatarId }).populate("PurchaseBy", "name email");
     const user = await Profile.findById(playerId);
 
