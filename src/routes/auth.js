@@ -35,7 +35,7 @@ router.post("/google-login", async (req, res) => {
       email: payload.email,
       name: payload.name,
       firstName: payload.given_name,
-      lastName: payload.family_name,
+      lastName: payload.family_name || "",
       picture: payload.picture,
       email_verified: payload.email_verified,
     };
