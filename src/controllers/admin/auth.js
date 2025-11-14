@@ -2,6 +2,7 @@ import User from '../../model/user.js';
 import bcrypt from 'bcrypt';
 import jwt from "jsonwebtoken";
 import Profile from '../../model/Profile.js';
+import AdminProfile from '../../model/AdminProfile.js';
 
 // Register
 export const register = async (req, res) => {
@@ -12,14 +13,14 @@ export const register = async (req, res) => {
         error: "All fields required"
       });
 
-    const existing = await User.findOne({ email });
+    const existing = await AdminProfile.findOne({ email });
     if (existing)
       return res.status(400).json({
         error: "Email already registered"
       });
 
     const hashed = await bcrypt.hash(password, 10);
-    const newUser = new Profile({
+    const newUser = new AdminProfile({
       first_name,
       last_name,
       email,
@@ -29,7 +30,7 @@ export const register = async (req, res) => {
       user_token: hashed,
       device_token: "NA",
       my_token: "NA",
-      referral_code: "NA", // Ye Error Dega kyu ki referral_code unique hone cahiye
+      referral_code: "NA2", // Ye Error Dega kyu ki referral_code unique hone cahiye
       pic_url: "default.png"
     });
 
@@ -55,7 +56,7 @@ export const login = async (req, res) => {
         error: "Email & Password required"
       });
 
-    const user = await Profile.findOne({ email });
+    const user = await AdminProfile.findOne({ email });
     if (!user) return res.status(404).json({
       error: "User not found"
     });

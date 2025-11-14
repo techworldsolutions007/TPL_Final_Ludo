@@ -744,7 +744,7 @@ export const setupCustomRoomGame = (namespace) => {
                 playerId,
                 name: user.first_name,
                 pic_url: user.pic_url || "",
-                board_avatar_url: doc.boardAvatarUrl,
+                board_avatar_url: doc.boardAvatarUrl,        
                 position: 0,
                 missedTurns: 0,
                 score: 0,
